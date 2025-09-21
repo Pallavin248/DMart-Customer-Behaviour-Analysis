@@ -1,0 +1,951 @@
+##MARKET BASKET ANALYSIS
+# Install necessary libraries
+!pip install mlxtend xlsxwriter openpyxl
+# Import required libraries
+import pandas as pd
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+# Load the dataset (Update the correct file path)
+file_path = "/content/DMart(new).xlsx"
+df = pd.read_excel(file_path)
+# Convert 'Items_list_new_1' column into transactions
+df['Items_list_new_1'] = df['Items_list_new_1'].astype(str)
+transactions = [items.split(', ') for items in df['Items_list_new_1'].dropna()]
+# Encode transactions
+te = TransactionEncoder()
+te_ary = te.fit(transactions).transform(transactions)
+df_encoded = pd.DataFrame(te_ary, columns=te.columns_)
+# Apply Apriori algorithm with support and confidence
+min_support = 0.1 # Minimum support threshold
+min_confidence = 0.7 # Minimum confidence threshold
+frequent_itemsets = apriori(df_encoded, min_support=min_support, use_colnames=True)
+# Generate association rules with confidence
+rules = association_rules(frequent_itemsets, metric="confidence",
+min_threshold=min_confidence)
+# Display all rules with confidence applied
+print("\n Association Rules (Support ≥ {:.2f}, Confidence ≥ {:.2f}):".format(min_support,
+min_confidence))
+print(rules)
+# Save the rules to an Excel file properly
+output_file = "market_basket_rules_confidence.xlsx"
+with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+    rules.to_excel(writer, index=False)
+print("\n Rules saved to:", output_file)
+# Download the file (For Google Colab users)
+from google.colab import files
+files.download(output_file)
+##Stacked bar chart
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Convert frozensets to strings for better readability
+rules['consequents'] = rules['consequents'].apply(lambda x: ', '.join(list(x)))
+rules['antecedents'] = rules['antecedents'].apply(lambda x: ', '.join(list(x)))
+# Select top consequents based on highest lift
+top_consequents = rules.groupby("consequents")["lift"].sum().nlargest(10).index
+filtered_rules = rules[rules["consequents"].isin(top_consequents)]
+# Pivot table for stacked bar chart
+pivot_data = filtered_rules.pivot(index='antecedents', columns='consequents',
+values='lift').fillna(0)
+# Plot
+plt.figure(figsize=(12, 6))
+pivot_data.plot(kind='bar', stacked=True, colormap='viridis', figsize=(12, 6))
+# Labels and title
+plt.xlabel("Antecedents (Items Bought)")
+plt.ylabel("Lift Value")
+plt.title("Stacked Bar Chart of Lift vs. Consequents")
+plt.xticks(rotation=45)
+plt.legend(title="Consequents (Recommended Items)", bbox_to_anchor=(1.05, 1),
+loc='upper left')
+plt.show()
+##PARETO ANALYSIS
+##Factors Customers most like about shopping at Dmart
+import matplotlib.pyplot as plt
+import numpy as np
+# Data
+variables = ['Pricing', 'Quality Of Products', 'Product Variety', 'Customer Service', 'Store
+cleanliness']
+frequency = [150, 106, 42, 15, 2]
+# Sorting data
+sorted_indices = np.argsort(frequency)[::-1]
+variables = np.array(variables)[sorted_indices]
+frequency = np.array(frequency)[sorted_indices]
+# Cumulative percentage
+cumulative_percentage = np.cumsum(frequency) / np.sum(frequency) *
+fig, ax1 = plt.subplots(figsize=(10, 6)) # Adjust figure size
+# Bar chart
+ax1.bar(variables, frequency, color='steelblue', alpha=0.7)
+# Add text annotations for counts on bars
+for i, v in enumerate(frequency):
+ax1.text(i, v + 5, str(v), ha='center', fontsize=10, fontweight='bold')
+ax1.set_xlabel('Variables')
+ax1.set_ylabel('Frequency', color='steelblue')
+# Rotate x-axis labels to prevent overlap
+plt.xticks(rotation=45, ha='right')
+# Line chart for cumulative percentage
+ax2 = ax1.twinx()
+ax2.plot(variables, cumulative_percentage, color='red', marker='o', linestyle='-',
+linewidth=2)
+ax2.set_ylabel('Cumulative Percentage', color='red')
+# Add text annotations for cumulative percentages
+for i, cp in enumerate(cumulative_percentage):
+ax2.text(i, cp, f"{cp:.1f}%", ha='left', va='bottom', fontsize=10, color='red',
+fontweight='bold')
+plt.title('Pareto Chart for Factors Customers most like about shopping at Dmart')
+plt.show()
+##Factors Affecting Customer Satisfaction
+import numpy as np
+import matplotlib.pyplot as plt
+# Data
+factors = ["Limited product variety", "Poor customer service", "Store Location", "Store
+cleanliness", "Insufficient discounts", "Higher prices", "Store hours", "Pickup services", "Poor
+Quality of products"]
+frequencies = [170, 145, 125, 110, 38, 35, 26, 24, 14]
+# Sorting data in descending order
+sorted_indices = np.argsort(frequencies)[::-1]
+factors = [factors[i] for i in sorted_indices]
+frequencies = [frequencies[i] for i in sorted_indices]
+# Cumulative percentage
+cumulative = np.cumsum(frequencies)
+cumulative_percentage = cumulative / cumulative[-1] *
+# Plot
+fig, ax1 = plt.subplots(figsize=(12, 7))
+ax1.bar(factors, frequencies, color='steelblue', alpha=0.7)
+ax1.set_xlabel("Variables")
+ax1.set_ylabel("Frequency", color='black')
+ax1.tick_params(axis='y', labelcolor='black')
+plt.xticks(rotation=30, ha='right')
+# Annotating frequencies on bars
+for i, v in enumerate(frequencies):
+ax1.text(i, v + 3, str(v), ha='center', fontsize=10, fontweight='bold')
+# Creating second y-axis for cumulative percentage
+ax2 = ax1.twinx()
+ax2.plot(factors, cumulative_percentage, color='red', marker='o', linestyle='-', linewidth=2)
+ax2.set_ylabel("Cumulative Percentage", color='red')
+ax2.tick_params(axis='y', labelcolor='black')
+# Annotating cumulative percentages
+for i, v in enumerate(cumulative_percentage):
+ax2.text(i, v + 1, f"{v:.1f}%", ha='center', fontsize=10, fontweight='bold',
+color='red')
+# Title
+plt.title("Pareto Chart of Factors Affecting Customer Satisfaction")
+plt.show()
+
+
+##CHI SQUARE TEST
+##Avg_amount_spent & Geder
+import pandas as pd
+from scipy.stats import chi2_contingency
+# Load the dataset
+file_path = "/content/DMart(new).xlsx"
+data = pd.read_excel(file_path)
+# Create a contingency table
+contingency_table = pd.crosstab(data['Gender'], data['Avg_amount_spent'])
+# Display the table
+print(contingency_table)
+# Perform the chi-square test
+chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+# Display results
+print("Chi-square Statistic:", chi2_stat)
+print("P-value:", p_value)
+##Avg_amount_spent & Income
+# Create a contingency table
+contingency_table = pd.crosstab(data['Income'], data['Avg_amount_spent'])
+# Display the table
+print(contingency_table)
+# Perform the chi-square test
+chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+# Display results
+print("Chi-square Statistic:", chi2_stat)
+print("P-value:", p_value)
+##FACTOR ANALYSIS
+!pip install factor-analyzer
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from factor_analyzer import FactorAnalyzer
+from factor_analyzer.factor_analyzer import calculate_kmo, calculate_bartlett_sphericity
+# Load the dataset
+file_path = "/content/DMart(new).xlsx" # Update file path if needed
+df = pd.read_excel(file_path)
+# Select relevant variables for Factor Analysis
+selected_features = ['Location','Avg_amount_spent','Shopping_duration','Pf', 'SDS',
+'Income','Basket_Size','CheckoutEfficiency','PA','Age','Gender','Occupation']
+# Filter the dataset to include only the selected variables
+df_selected = df[selected_features].copy()
+# Step 1: Handle missing and infinite values
+df_selected = df_selected.replace([np.inf, -np.inf], np.nan) # Replace infinite values
+df_selected = df_selected.dropna() # Drop missing values
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import zscore
+# Boxplot to visually inspect outliers
+plt.figure(figsize=(12,6))
+sns.boxplot(data=df_selected)
+plt.xticks(rotation=45)
+plt.title("Boxplot for Outlier Detection")
+plt.show()
+# Z-score method to identify outliers
+z_scores = df_selected.apply(zscore) # Standardizing data
+outliers = (z_scores.abs() > 3).sum() # Count values beyond ±3 standard deviations
+print("Number of outliers per column:\n", outliers)
+# Function to remove outliers using IQR
+def remove_outliers(df, column):
+Q1 = df[column].quantile(0.25)
+Q3 = df[column].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+return df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
+# Apply outlier removal for affected columns
+outlier_columns = ['Pf', 'Basket_Size', 'CheckoutEfficiency','Occupation']
+for col in outlier_columns:
+df_selected = remove_outliers(df_selected, col)
+print("Outliers removed successfully!")
+import seaborn as sns
+import matplotlib.pyplot as plt
+# Assuming df_cleaned is your DataFrame after removing outliers
+# Compute the correlation matrix (using only numeric columns)
+corr_matrix = df_selected.corr()
+# Set up the matplotlib figure
+plt.figure(figsize=(10, 8))
+# Create a heatmap using seaborn
+sns.heatmap(corr_matrix,
+ annot=True, # Annotate cells with correlation coefficients
+ cmap="coolwarm", # Use the coolwarm colormap for visualizing correlations
+ fmt=".2f", # Format numbers to 2 decimal places
+ linewidths=0.5) # Add lines between cells
+# Add title and adjust x/y tick labels for better readability
+plt.title("Correlation Matrix Heatmap")
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+plt.show()
+# Select relevant variables for Factor Analysis
+selected_features = ['Avg_amount_spent','Shopping_duration', 'SDS',
+'Income','Basket_Size','CheckoutEfficiency','PA','Age','Occupation','Location']
+# Filter the dataset to include only the selected variables
+df_selected = df[selected_features].copy()
+# Step 1: Handle missing and infinite values
+df_selected = df_selected.replace([np.inf, -np.inf], np.nan) # Replace infinite values
+df_selected = df_selected.dropna() # Drop missing values
+# Step 2: Check suitability for Factor Analysis
+kmo_all, kmo_model = calculate_kmo(df_selected)
+bartlett_stat, bartlett_p_value = calculate_bartlett_sphericity(df_selected)
+print(f"KMO Test Score: {kmo_model:.3f} (Should be > 0.6 for Factor Analysis)")
+print(f"Bartlett’s Test p-value: {bartlett_p_value:.5f} (Should be < 0.05)")
+# Step 3: Determine the optimal number of factors using Eigenvalues
+fa = FactorAnalyzer(n_factors=len(selected_features), rotation=None)
+fa.fit(df_selected)
+ev, v = fa.get_eigenvalues()
+# Plot Scree Plot
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, len(ev)+1), ev, marker="o", linestyle="-")
+plt.xlabel("Factors")
+plt.ylabel("Eigenvalue")
+plt.title("Scree Plot for Factor Analysis")
+plt.axhline(y=1, color='r', linestyle="--") # Kaiser Criterion (Keep factors >1)
+plt.show()
+# Step 4: Perform Factor Analysis (Choose number of factors based on Scree Plot)
+num_factors = 3 # Adjust based on Scree plot
+fa = FactorAnalyzer(n_factors=num_factors, rotation="varimax") # Using Varimax Rotation
+fa.fit(df_selected)
+# Step 5: Get Factor Loadings
+factor_loadings = pd.DataFrame(fa.loadings_, index=selected_features)
+print("\nFactor Loadings:\n", factor_loadings)
+# Step 6: Visualize Factor Loadings
+plt.figure(figsize=(10, 6))
+sns.heatmap(factor_loadings, annot=True, cmap="coolwarm", center=0)
+plt.title("Factor Loadings Heatmap")
+plt.show()
+# Define the threshold for significant loadings
+threshold = 0.4
+# Create an empty dictionary to store factor assignments
+factor_assignments = {}
+# Iterate through the factor loadings DataFrame
+for variable in factor_loadings.index:
+factor_index = np.argmax(np.abs(factor_loadings.loc[variable])) # Get the highest loading
+factor loading_value = factor_loadings.loc[variable, factor_index]
+if abs(loading_value) >= threshold: # Only consider significant loadings
+factor_assignments[variable] = f"Factor {factor_index + 1}" # Factor numbers start from
+# Convert to DataFrame for better visualization
+factor_assignment_df = pd.DataFrame(list(factor_assignments.items()), columns=['Variable',
+'Assigned Factor'])
+# Display factor assignments
+print(factor_assignment_df)
+
+
+##KNN and Regression tree
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+# Load the dataset
+file_path = "/content/DMart(new).xlsx" # Update with the correct path
+df = pd.read_excel(file_path)
+# Fix column name issue (remove extra space)
+df.rename(columns={'Shopping_preference ': 'Shopping_preference'}, inplace=True)
+# Selecting relevant features
+features = ['Age', 'Income', 'Location', 'Occupation', 'Pf',
+ 'Avg_amount_spent', 'CheckoutEfficiency', 'Price_rating',
+ 'Overall_rating']
+target = 'Shopping_preference'
+# Dropping rows with missing values
+df_cleaned = df[features + [target]].dropna()
+# Splitting data into features (X) and target (y)
+X = df_cleaned[features]
+y = df_cleaned[target]
+# Standardizing numerical features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+# Splitting into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2,
+random_state=42)
+# Training KNN model
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+# Predicting on the test set
+y_pred = knn.predict(X_test)
+# Evaluating model performance
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+conf_matrix = confusion_matrix(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("Classification Report:\n", report)
+# Plotting confusion matrix
+plt.figure(figsize=(6, 4))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap="Blues", xticklabels=knn.classes_,
+yticklabels=knn.classes_)
+plt.xlabel('Predicted Label')
+plt.ylabel('True Label')
+plt.title('Confusion Matrix')
+plt.show()
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report,confusion_matrix
+from imblearn.over_sampling import SMOTE
+import seaborn as sns
+import matplotlib.pyplot as plt
+# Load the dataset
+file_path = "/content/DMart(new).xlsx" # Update with the correct path
+df = pd.read_excel(file_path)
+# Fix column name issue (remove extra space)
+df.rename(columns={'Shopping_preference ': 'Shopping_preference'}, inplace=True)
+# Selecting relevant features
+features = ['Age', 'Gender', 'Income', 'Location', 'Occupation', 'Pf',
+ 'Avg_amount_spent', 'CheckoutEfficiency', 'Price_rating',
+ 'Overall_rating']
+target = 'Shopping_preference'
+# Dropping rows with missing values
+df_cleaned = df[features + [target]].dropna()
+# Splitting data into features (X) and target (y)
+X = df_cleaned[features]
+y = df_cleaned[target]
+# Standardizing numerical features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+# Splitting into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2,
+random_state=42)
+
+# Apply SMOTE to balance the classes
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+# Train KNN with weighted distance after SMOTE
+knn_smote = KNeighborsClassifier(n_neighbors=5, weights='distance')
+knn_smote.fit(X_resampled, y_resampled)
+# Predicting on the test set
+y_pred_smote = knn_smote.predict(X_test)
+# Evaluating model performance
+accuracy_smote = accuracy_score(y_test, y_pred_smote)
+report_smote = classification_report(y_test, y_pred_smote, zero_division=0)
+conf_matrix_smote = confusion_matrix(y_test, y_pred_smote)
+print("Accuracy after SMOTE:", accuracy_smote)
+print("Classification Report:\n", report_smote)
+print("Confusion Matrix:\n", conf_matrix_smote)
+# Plot confusion matrix
+plt.figure(figsize=(6, 4))
+sns.heatmap(conf_matrix_smote, annot=True, fmt="d", cmap="Blues")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.title("Confusion Matrix (KNN with SMOTE)")
+plt.show()
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from imblearn.over_sampling import SMOTE
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+# Load the dataset
+file_path = "/content/DMart(new).xlsx" # Update with correct path
+df = pd.read_excel(file_path)
+# Fix column name issue (remove extra space)
+# Rename column
+df.rename(columns={'Shopping_preference ': 'Shopping_preference'}, inplace=True)
+# Selecting relevant features
+features = ['Age', 'Gender', 'Income', 'Location', 'Occupation', 'Pf',
+ 'Avg_amount_spent', 'CheckoutEfficiency', 'Price_rating',
+ 'Overall_rating']
+target = 'Shopping_preference'
+# Dropping rows with missing values
+df_cleaned = df[features + [target]].dropna()
+# Splitting data into features (X) and target (y)
+X = df_cleaned[features]
+y = df_cleaned[target]
+# Standardizing numerical features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+# Splitting into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2,
+random_state=42)
+
+
+# Apply SMOTE to balance classes
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+# Train Random Forest Classifier
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_resampled, y_resampled)
+# Predict on the test set
+y_pred_rf = rf_model.predict(X_test)
+# Evaluate model performance
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+report_rf = classification_report(y_test, y_pred_rf, zero_division=0)
+print("Accuracy (Random Forest):", accuracy_rf)
+print("Classification Report:\n", report_rf)
+# Compute confusion matrix
+conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
+# Plot confusion matrix
+plt.figure(figsize=(5,4))
+sns.heatmap(conf_matrix_rf, annot=True, fmt="d", cmap="Blues", xticklabels=['Class 0',
+'Class 1'],
+ yticklabels=['Class 0', 'Class 1'])
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.title("Confusion Matrix (Random Forest)")
+plt.show()
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from imblearn.over_sampling import SMOTE
+# Load the dataset
+file_path = "/content/DMart(new).xlsx" # Update with correct path
+df = pd.read_excel(file_path)
+# Fix column name issue (remove extra space)
+df.rename(columns={'Shopping_preference ': 'Shopping_preference'}, inplace=True)
+# Selecting relevant features
+features = ['Age', 'Gender', 'Income', 'Location', 'Occupation', 'Pf',
+ 'Avg_amount_spent', 'CheckoutEfficiency', 'Price_rating',
+ 'Overall_rating']
+target = 'Shopping_preference'
+# Dropping rows with missing values
+df_cleaned = df[features + [target]].dropna()
+# Splitting data into features (X) and target (y)
+X = df_cleaned[features]
+y = df_cleaned[target]
+# Standardizing numerical features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+# Splitting into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2,
+random_state=42)
+# Apply SMOTE to balance classes
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
+# Train Random Forest Classifier
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42,
+class_weight='balanced')
+rf_model.fit(X_resampled, y_resampled)
+# Predict on the test set
+y_pred_rf = rf_model.predict(X_test)
+# Evaluate model performance
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+report_rf = classification_report(y_test, y_pred_rf, zero_division=0)
+conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
+print("Accuracy (Random Forest):", accuracy_rf)
+print("Classification Report:\n", report_rf)
+print("Confusion Matrix:\n", conf_matrix_rf)
+# Plot Confusion Matrix
+plt.figure(figsize=(5, 4))
+sns.heatmap(conf_matrix_rf, annot=True, fmt="d", cmap="Blues", xticklabels=["In-store",
+"Online"], yticklabels=["In-store", "Online"])
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.title("Confusion Matrix for Random Forest Model")
+plt.show()
+from sklearn.model_selection import GridSearchCV
+param_grid = {
+'n_estimators': [50, 100, 200],
+'max_depth': [5, 10, 20],
+'min_samples_split': [2, 5, 10],
+'min_samples_leaf': [1, 2, 4]}
+grid_search = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=5,
+scoring='accuracy')
+grid_search.fit(X_resampled, y_resampled)
+print("Best Parameters:", grid_search.best_params_)
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+# Train Random Forest Classifier with optimized parameters
+rf_model_optimized = RandomForestClassifier(
+n_estimators=50,
+max_depth=20,
+min_samples_split=5,
+min_samples_leaf=1,
+random_state=42,
+class_weight="balanced"
+)
+# Fit the model
+rf_model_optimized.fit(X_resampled, y_resampled)
+# Predict on the test set
+y_pred_rf_optimized = rf_model_optimized.predict(X_test)
+# Evaluate model performance
+accuracy_rf_optimized = accuracy_score(y_test, y_pred_rf_optimized)
+report_rf_optimized = classification_report(y_test, y_pred_rf_optimized, zero_division=0)
+conf_matrix_rf_optimized = confusion_matrix(y_test, y_pred_rf_optimized)
+print("Optimized Random Forest Accuracy:", accuracy_rf_optimized)
+print("Optimized Classification Report:\n", report_rf_optimized)
+print("Optimized Confusion Matrix:\n", conf_matrix_rf_optimized)
+# Plot Confusion Matrix
+plt.figure(figsize=(5, 4))
+sns.heatmap(
+conf_matrix_rf_optimized,
+annot=True, fmt='d', cmap='Blues',
+xticklabels=["In-store", "Online"],
+yticklabels=["In-store", "Online"]
+)
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.title("Optimized Confusion Matrix for Random Forest Model")
+plt.show()
+
+
+##LOGISTIC REGRESSION
+import pandas as pd
+import numpy as np
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+df = pd.read_excel("/content/DMart(new).xlsx")
+# Define independent variables
+features = ['Age', 'Income', 'Gender', 'Occupation', 'Location', 'Pf', 'Shopping_duration', 'SDS',
+ 'Basket_Size', 'Avg_amount_spent', 'PA', 'CheckoutEfficiency', 'Price_rating',
+'Overall_rating']
+# Drop rows with missing values (if any)
+df = df[features].dropna()
+# Add a constant column (required for VIF calculation)
+df['constant'] =
+# Compute VIF for each feature
+vif_data = pd.DataFrame()
+vif_data["Variable"] = df.columns
+vif_data["VIF"] = [variance_inflation_factor(df.values, i) for i in range(df.shape[1])]
+# Drop the constant row
+vif_data = vif_data[vif_data["Variable"] != "constant"]
+# Display VIF values
+print(vif_data)
+import pandas as pd
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+# Load data
+df = pd.read_excel("/content/DMart(new).xlsx") # Replace with actual file
+# Define independent variables and target
+features = ['Age', 'Income', 'Gender', 'Occupation', 'Location', 'Pf', 'Shopping_duration', 'SDS',
+ 'Basket_Size', 'Avg_amount_spent', 'PA', 'CheckoutEfficiency', 'Price_rating',
+'Overall_rating']
+target = 'Churn'
+# Drop missing values
+df = df[features + [target]].dropna()
+# Standardize continuous variables
+scaler = StandardScaler()
+df[features] = scaler.fit_transform(df[features])
+# Add constant for intercept
+X = sm.add_constant(df[features])
+y = df[target]
+# Fit logistic regression model
+model = sm.Logit(y, X).fit()
+# Display summary
+print(model.summary())
+import pandas as pd
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+# Define independent variables and target
+features = ['Age', 'Income', 'Gender', 'Occupation', 'Location', 'Pf', 'Shopping_duration', 'SDS',
+ 'Basket_Size', 'Avg_amount_spent', 'PA', 'CheckoutEfficiency', 'Price_rating',
+'Overall_rating']
+target = 'Churn'
+# Drop missing values
+df = df[features + [target]].dropna()
+# Standardize continuous variables
+scaler = StandardScaler()
+df[features] = scaler.fit_transform(df[features])
+# Define stepwise regression function
+def stepwise_selection(X, y, significance_level=0.05):
+" Perform stepwise regression to select significant features "
+initial_features = X.columns.tolist()
+best_features = []
+while len(initial_features) > 0:
+ # Forward Selection: Add the most significant feature
+ p_values = []
+ for feature in initial_features:
+ X_selected = sm.add_constant(pd.DataFrame(X[best_features + [feature]]))
+ model = sm.Logit(y, X_selected).fit(disp=0)
+ p_values.append((feature, model.pvalues.iloc[-1])) # Get p-value of the new feature
+ # Select feature with lowest p-value
+ p_values.sort(key=lambda x: x[1]) # Sort by p-value
+ if p_values and p_values[0][1] < significance_level:
+ best_features.append(p_values[0][0]) # Add feature to model
+ initial_features.remove(p_values[0][0])
+ else:
+ break # Stop if no feature is significant
+# Backward Elimination: Remove less significant features
+while len(best_features) > 0:
+ X_selected = sm.add_constant(pd.DataFrame(X[best_features]))
+ model = sm.Logit(y, X_selected).fit(disp=0)
+ max_p_value = model.pvalues[1:].max() # Ignore intercept p-value
+ if max_p_value > significance_level:
+ remove_feature = model.pvalues[1:].idxmax() # Find feature with highest p-value
+ best_features.remove(remove_feature) # Remove it
+ else:
+ break # Stop if all features are significant
+return best_features
+# Apply stepwise regression
+X = df[features]
+y = df[target]
+selected_features = stepwise_selection(X, y)
+print("Selected Features:", selected_features)
+# Select the final features
+X_final = df[selected_features] # Using only selected features
+y = df['Churn'] # Target variable
+# Add intercept term
+X_final = sm.add_constant(X_final)
+# Fit logistic regression model
+final_model = sm.Logit(y, X_final).fit()
+# Display model summary
+print(final_model.summary())
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import pandas as pd
+# Define final feature set (without constant)
+X_vif = X_final.drop(columns=['const'], errors='ignore')
+# Compute VIF for each feature
+vif_data = pd.DataFrame()
+vif_data["Feature"] = X_vif.columns
+vif_data["VIF"] = [variance_inflation_factor(X_vif.values, i) for i in range(X_vif.shape[1])]
+# Display results
+print("Variance Inflation Factor (VIF) Results:")
+print(vif_data)
+from statsmodels.stats.stattools import durbin_watson
+# Compute residuals
+y_pred_prob = final_model.predict(X_final)
+residuals = y - y_pred_prob
+# Perform Durbin-Watson test
+dw_stat = durbin_watson(residuals)
+print(f"Durbin-Watson Test Statistic: {dw_stat:.2f}")
+import numpy as np
+import scipy.stats as stats
+from statsmodels.stats.stattools import durbin_watson
+# Compute residuals
+y_pred_prob = final_model.predict(X_final)
+residuals = y - y_pred_prob
+# Perform Durbin-Watson test
+dw_stat = durbin_watson(residuals)
+print(f"Durbin-Watson Test Statistic: {dw_stat:.2f}")
+# Compute approximate p-value
+n = len(y) # Number of observations
+rho = 1 - (dw_stat / 2)
+z_score = rho / (1 / np.sqrt(n))
+p_value = 2 * (1 - stats.norm.cdf(abs(z_score))) # Two-tailed test
+print(f"Approximate p-value: {p_value:.6f}")
+import statsmodels.api as sm
+import statsmodels.stats.api as sms
+from statsmodels.compat import lzip
+# Compute squared residuals
+residuals_sq = residuals**2
+# Perform Breusch-Pagan test
+bp_test = sms.het_breuschpagan(residuals_sq, X_final)
+# Display results
+labels = ['Lagrange Multiplier statistic', 'p-value', 'f-value', 'f p-value']
+print("Breusch-Pagan Test Results:")
+print(lzip(labels, bp_test))
+import pandas as pd
+import numpy as np
+import statsmodels.api as sm
+from sklearn.preprocessing import StandardScaler
+# Load Data
+df = pd.read_excel("/content/DMart(new).xlsx", engine="openpyxl") # Adjust file path
+# Define selected features
+selected_features = ['PA', 'CheckoutEfficiency', 'Price_rating', 'Overall_rating',
+'Occupation','Shopping_duration','Avg_amount_spent']
+target = 'Churn'
+# Drop missing values
+df = df[selected_features + [target]].dropna()
+# Standardize continuous variables
+scaler = StandardScaler()
+df[['Price_rating', 'Overall_rating']] = scaler.fit_transform(df[['Price_rating', 'Overall_rating']])
+# Define X (features) and y (target)
+X = df[selected_features]
+y = df[target]
+# Add constant for intercept
+X = sm.add_constant(X)
+# Step 1: Fit initial logistic regression model
+logit_model = sm.Logit(y, X).fit()
+# Step 2: Get absolute residuals from initial model
+residuals = np.abs(logit_model.resid_response)
+# Step 3: Compute weights (inverse of residual variance)
+weights = 1 / (residuals + 1e-5) # Adding small value to avoid division by zero
+# Step 4: Fit WLS Model using computed weights
+wls_model = sm.WLS(y, X, weights=weights).fit()
+# Display WLS model summary
+print(wls_model.summary())
+# Drop Price_rating
+selected_features = ['PA', 'CheckoutEfficiency', 'Overall_rating', 'Occupation',
+'Shopping_duration', 'Avg_amount_spent']
+# Define X (without Price_rating)
+X_wls = df[selected_features]
+X_wls = sm.add_constant(X_wls)
+# Fit WLS again
+wls_model_new = sm.WLS(y, X_wls).fit()
+# Display new summary
+print(wls_model_new.summary())
+from statsmodels.stats.diagnostic import het_breuschpagan
+import statsmodels.api as sm
+# Get residuals from the WLS model
+residuals = wls_model.resid
+# Define independent variables (including intercept)
+X_bp = X.copy() # Copy features used in WLS model
+X_bp = sm.add_constant(X_bp) # Ensure constant is included
+# Perform Breusch-Pagan test
+bp_test = het_breuschpagan(residuals, X_bp)
+# Display results
+labels = ['Lagrange Multiplier statistic', 'p-value', 'f-value', 'f p-value']
+bp_results = dict(zip(labels, bp_test))
+print("Breusch-Pagan Test Results:")
+for key, value in bp_results.items():
+    print(f"{key}: {value:.6f}")
+# Fit logistic regression with robust standard errors
+final_model1 = sm.Logit(y, X).fit(cov_type='HC3')
+# Display model summary
+print(final_model1.summary())
+from statsmodels.stats.stattools import durbin_watson
+# Ensure X has the same features as the final_model1
+X_selected = sm.add_constant(X)[final_model1.model.exog_names]
+# Predict probabilities using the HC3 model
+y_pred_prob = final_model1.predict(X_selected)
+# Compute residuals
+residuals = y - y_pred_prob
+# Perform Durbin-Watson test
+dw_stat = durbin_watson(residuals)
+print(f"Durbin-Watson Test Statistic: {dw_stat:.2f}")
+# Compute approximate p-value
+n = len(y) # Number of observations
+rho = 1 - (dw_stat / 2)
+z_score = rho / (1 / np.sqrt(n))
+p_value = 2 * (1 - stats.norm.cdf(abs(z_score))) # Two-tailed test
+print(f"Approximate p-value: {p_value:.6f}")
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import pandas as pd
+# Define features for VIF check (exclude target)
+X_vif = X.copy() # Use the same features from the logistic model
+X_vif = X_vif.drop(columns=['const']) # Remove constant
+# Calculate VIF for each feature
+vif_data = pd.DataFrame()
+vif_data["Feature"] = X_vif.columns
+vif_data["VIF"] = [variance_inflation_factor(X_vif.values, i) for i in range(X_vif.shape[1])]
+# Display VIF results
+print(vif_data)
+df['PA_centered'] = df['PA'] - df['PA'].mean()
+df['Occupation_centered'] = df['Occupation'] - df['Occupation'].mean()
+df['CheckoutEfficiency_centered'] = df['CheckoutEfficiency'] - df['CheckoutEfficiency'].mean()
+df['Shopping_duration_centered'] = df['Shopping_duration'] - 
+df['Shopping_duration'].mean()
+# Drop original PA and Occupation
+df = df.drop(columns=['PA', 'Occupation'])
+# Define final selected features (use centered versions)
+selected_features = ['PA_centered', 'Occupation_centered', 'CheckoutEfficiency',
+'Price_rating', 'Overall_rating','CheckoutEfficiency_centered','Shopping_duration_centered']
+target = 'Churn'
+#Define X (features) and y (target)
+X = df[selected_features]
+y = df[target]
+# Add constant for intercept
+X = sm.add_constant(X)
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import pandas as pd
+# Calculate VIF for each feature
+X_vif = X.copy()
+X_vif = X_vif.drop(columns=['const']) # Remove intercept
+vif_data = pd.DataFrame()
+vif_data["Feature"] = X_vif.columns
+vif_data["VIF"] = [variance_inflation_factor(X_vif.values, i) for i in range(X_vif.shape[1])]
+print(vif_data)
+from sklearn.metrics import accuracy_score, roc_auc_score
+y_pred_probs = final_model1.predict(X)
+y_pred = (y_pred_probs >= 0.5).astype(int)
+accuracy = accuracy_score(y, y_pred)
+auc_score = roc_auc_score(y, y_pred_probs)
+print(f"Accuracy: {accuracy:.4f}")
+print(f"ROC AUC Score: {auc_score:.4f}")
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score
+# Predict probabilities (logistic regression outputs probabilities)
+y_pred_probs = final_model1.predict(X)
+# Convert probabilities to binary predictions (Threshold = 0.5)
+y_pred = (y_pred_probs >= 0.5).astype(int)
+# Compute confusion matrix
+conf_matrix = confusion_matrix(y, y_pred)
+# **Plot Confusion Matrix**
+plt.figure(figsize=(5, 4))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=["No Churn",
+"Churn"], yticklabels=["No Churn", "Churn"])
+plt.xlabel("Predicted Label")
+plt.ylabel("Actual Label")
+plt.title("Confusion Matrix")
+plt.show()
+# **Plot ROC Curve**fpr, tpr, _ = roc_curve(y, y_pred_probs) # Compute ROC curve
+values
+auc_score = roc_auc_score(y, y_pred_probs) # Compute AUC score
+plt.figure(figsize=(6, 5))
+plt.plot(fpr, tpr, color="blue", label=f"ROC Curve (AUC = {auc_score:.3f})")
+plt.plot([0, 1], [0, 1], linestyle="--", color="gray") # Random classifier baseline
+plt.xlabel("False Positive Rate (FPR)")
+plt.ylabel("True Positive Rate (TPR)")
+plt.title("Receiver Operating Characteristic (ROC) Curve")
+plt.legend()
+plt.show()
+# Print AUC Score
+print(f"ROC AUC Score: {auc_score:.4f}")
+# Extract the Log-Likelihood of the full model and the null model
+ll_full = final_model1.llf # Log-likelihood of the fitted model
+ll_null = final_model1.llnull # Log-likelihood of the null model
+# Compute the Likelihood Ratio (LR) test statistic
+lr_stat = 2 * (ll_full - ll_null)
+# Compute the p-value
+from scipy.stats import chi2
+df_model = final_model1.df_model # Degrees of freedom
+p_value = chi2.sf(lr_stat, df_model)
+# Print results
+print(f"Likelihood Ratio Test Statistic: {lr_stat:.4f}")
+print(f"p-value: {p_value:.4f}")
+# Interpretation
+if p_value < 0.05:
+print("Model is statistically significant (p < 0.05).")
+else:
+print("Model is NOT statistically significant (p > 0.05). Consider improving the model.")
+from scipy.stats import chi2_contingency
+import numpy as np
+import pandas as pd
+# Add predicted probabilities
+df['pred_prob'] = final_model1.predict(X)
+# Divide predicted probabilities into 10 groups (deciles), handling duplicate bin edges
+df['decile'] = pd.qcut(df['pred_prob'], 10, labels=False, duplicates='drop')
+# Create a contingency table: Observed vs Expected Churn counts in each group
+hl_table = df.groupby('decile').agg(observed_churn=('Churn', 'sum'),
+expected_churn=('pred_prob', 'sum'))
+# Perform Hosmer-Lemeshow Test
+hl_stat, hl_p_value, _, _ = chi2_contingency(hl_table)
+# Display results
+print(f"Hosmer-Lemeshow Test Statistic: {hl_stat:.4f}")
+print(f"p-value: {hl_p_value:.4f}")
+# Interpretation
+if hl_p_value > 0.05:
+print("Model fits the data well (p > 0.05).")
+else:
+ print("Model does NOT fit well (p < 0.05). Consider improving the model.")
+import statsmodels.api as sm
+# Compute influence measures
+influence = final_model1.get_influence()
+cooks_d = influence.cooks_distance[0]
+# Identify potential outliers
+outliers = np.where(cooks_d > 4 / len(X))[0]
+print("Potential outliers:", outliers)
+import numpy as np
+# Compute Cook's Distance threshold (rule of thumb: 4/N)
+threshold = 4 / len(X)
+high_influence = np.where(cooks_d > threshold)[0]
+print(f"Total Outliers Above Threshold: {len(high_influence)}")
+print(f"Outlier Indices: {high_influence}")
+# Remove the identified outliers
+df_cleaned = df.drop(index=high_influence)
+# Define X and y again
+X_cleaned = sm.add_constant(df_cleaned[selected_features])
+y_cleaned = df_cleaned['Churn']
+# Fit logistic regression model
+final_model_cleaned = sm.Logit(y_cleaned, X_cleaned).fit(cov_type='HC3')
+# Print updated summary
+print(final_model_cleaned.summary())
+from sklearn.metrics import accuracy_score, roc_auc_score, roc_curve, auc
+import matplotlib.pyplot as plt
+# Predict probabilities (logistic regression outputs probabilities)
+y_pred_prob = final_model_cleaned.predict(X_cleaned)
+# Convert probabilities to binary predictions (threshold = 0.5)
+y_pred_class = (y_pred_prob >= 0.5).astype(int)
+# Compute accuracy
+accuracy = accuracy_score(y_cleaned, y_pred_class)
+print(f"Model Accuracy: {accuracy:.4f}")
+# Compute ROC curve
+fpr, tpr, _ = roc_curve(y_cleaned, y_pred_prob)
+roc_auc = auc(fpr, tpr)
+print(f"Model AUC: {roc_auc:.4f}")
+# Plot ROC Curve
+plt.figure(figsize=(8,6))
+plt.plot(fpr, tpr, color='blue', label=f'ROC curve (AUC = {roc_auc:.4f})')
+plt.plot([0, 1], [0, 1], color='red', linestyle='--') # Random model line
+plt.xlabel('False Positive Rate (FPR)')
+plt.ylabel('True Positive Rate (TPR)')
+plt.title('ROC Curve for Logistic Regression')
+plt.legend()
+plt.grid()
+plt.show()
+from sklearn.metrics import confusion_matrix, classification_report
+# Predict class labels using the threshold of 0.5
+y_pred_class = (y_pred_prob >= 0.5).astype(int)
+# Compute confusion matrix
+conf_matrix = confusion_matrix(y_cleaned, y_pred_class)
+print("Confusion Matrix:")
+print(conf_matrix)
+# Compute classification report (Precision, Recall, F1-score)
+class_report = classification_report(y_cleaned, y_pred_class)
+print("\nClassification Report:")
+print(class_report)
+from sklearn.metrics import accuracy_score, roc_curve, auc, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Predict probabilities (logistic regression outputs probabilities)
+y_pred_prob = final_model_cleaned.predict(X_cleaned)
+# Convert probabilities to binary predictions (threshold = 0.5)
+y_pred_class = (y_pred_prob >= 0.5).astype(int)
+# Compute accuracy
+accuracy = accuracy_score(y_cleaned, y_pred_class)
+print(f"Model Accuracy: {accuracy:.4f}")
+# Compute ROC curve
+fpr, tpr, _ = roc_curve(y_cleaned, y_pred_prob)
+roc_auc = auc(fpr, tpr)
+print(f"Model AUC: {roc_auc:.4f}")
+# Plot ROC Curve
+plt.figure(figsize=(8,6))
+plt.plot(fpr, tpr, color='blue', label=f'ROC curve (AUC = {roc_auc:.4f})')
+plt.plot([0, 1], [0, 1], color='red', linestyle='--') # Random model line
+plt.xlabel('False Positive Rate (FPR)')
+plt.ylabel('True Positive Rate (TPR)')
+plt.title('ROC Curve for Logistic Regression')
+plt.legend()
+plt.grid()
+plt.show()
+# Compute confusion matrix
+cm = confusion_matrix(y_cleaned, y_pred_class)
+# Plot confusion matrix using seaborn
+plt.figure(figsize=(6,5))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['No Churn', 'Churn'],
+yticklabels=['No Churn', 'Churn'])
+plt.xlabel('Predicted Label')
+plt.ylabel('True Label')
+plt.title('Confusion Matrix')
+plt.show()
