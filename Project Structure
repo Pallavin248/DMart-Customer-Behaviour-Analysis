@@ -1,0 +1,38 @@
+DMart-Customer-Behaviour-Analysis/
+│
+├── data/
+│   ├── Dmart_dataset.xlsx                # raw survey + transaction data
+│   ├── OtherSupermarkets_dataset.xlsx
+│   └── README.md                         # data dictionary + questionnaire info
+│
+├── src/
+│   ├── market_basket_analysis.py         # your MBA (Apriori) script
+│   ├── pareto_analysis.py                # Pareto charts
+│   ├── chi_square_test.py                # Chi-square scripts
+│   ├── factor_analysis.py                # Factor analysis pipeline
+│   ├── knn_classification.py             # KNN (with/without SMOTE)
+│   ├── preference_classification.py      # RandomForest + GridSearch + SMOTE
+│   ├── logistic_regression_full.py       # VIF, stepwise, Logit, HC3, tests, plots
+│   └── utils.py                          # helper functions (loading, encode)
+│
+├── notebooks/
+│   ├── 01_EDA_and_Cleaning.ipynb
+│   ├── 02_ChiSquare_And_Pareto.ipynb
+│   ├── 03_Logistic_Regression.ipynb
+│   ├── 04_Factor_Analysis.ipynb
+│   ├── 05_Preference_Classification.ipynb
+│   └── 06_Market_Basket_Analysis.ipynb
+│
+├── results/
+│   ├── plots/
+│   ├── tables/
+│   └── models/
+│
+├── docs/
+│   ├── DMart_Project_Report.pdf
+│   ├── DMart_Project_Presentation.pptx
+│   └── questionnaire.pdf                 # the survey form & consent info
+│
+├── requirements.txt
+├── .gitignore
+└── README.md
