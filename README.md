@@ -22,10 +22,3 @@ It demonstrates data preprocessing, hypothesis testing, churn-prediction modelin
 ├─ Dmart_dataset.xlsx # main DMart survey data (315 responses)
 ├─ OtherSupermarkets_dataset.xlsx # other supermarkets (110 responses)
 
-
-    df, features = load_and_prepare(args.data)
-    train_and_evaluate(df, features)
-
-'''
-## --- LOGISTIC REGRESSION (Churn Prediction) ---
---- RANDOM FOREST (Preference Classification; SMOTE for imbalance) ---
