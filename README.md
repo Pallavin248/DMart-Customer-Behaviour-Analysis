@@ -18,6 +18,40 @@ It demonstrates data preprocessing, hypothesis testing, churn-prediction modelin
 
 ---
 
+
+---
+
+## 📊 Methodology
+1. **Data Collection**: 425 responses collected via structured survey.  
+2. **Analysis Tools**: SPSS, Python (sklearn, statsmodels, mlxtend for MBA).  
+3. **Steps**:
+   - Descriptive analysis of demographics & shopping trends  
+   - Chi-Square Tests for independence  
+   - Logistic Regression for churn prediction  
+   - Factor Analysis (KMO = 0.691, Bartlett’s p < 0.001)  
+   - KNN & Random Forest for classification  
+   - Market Basket Analysis using Apriori algorithm  
+
+---
+
+## 📈 Results
+- **Chi-Square Test**: Income influences spending, Gender does not.  
+- **Logistic Regression**: Product availability, checkout efficiency, and occupation increase churn risk.  
+- **Factor Analysis**: 3 key factors → Socioeconomic traits, Basket & duration, Store efficiency.  
+- **Random Forest**: Best model for customer preference classification (80.95%).  
+- **MBA Findings**: Strong product bundles (Groceries + Packaged Food, Dairy + Beverages).  
+
+---
+
+## 📑 Files
+- `docs/DMart-Consumer-Behaviour.pptx` → Research presentation  
+- `analysis/` → Chi-Square, Logistic Regression, FA results  
+- `models/` → ML models in Jupyter Notebooks  
+- `images/` → Graphs (ROC, Scree Plot, MBA visualization)  
+
+---
+
+
 # --- Dataset ---
 ├─ Dmart_dataset.xlsx # main DMart survey data (315 responses)
 ├─ OtherSupermarkets_dataset.xlsx # other supermarkets (110 responses)
